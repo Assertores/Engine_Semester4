@@ -155,39 +155,38 @@ struct Matrix4x4
 		return m;
 	}
 
-	inline static Matrix4x4 FromRotation(const Quaternion& rotation) {
-		Matrix4x4 m = Matrix4x4::Identity;
+	inline static Matrix4x4 FromRotation(const Quaternion& orientation) {
+		Matrix4x4 Result = Matrix4x4::Identity;
 
-		float tx = rotation.x + rotation.x;
-		float ty = rotation.y + rotation.y;
-		float tz = rotation.z + rotation.z;
+		float fTx = orientation.x + orientation.x;
+		float fTy = orientation.y + orientation.y;
+		float fTz = orientation.z + orientation.z;
+		float fTwx = fTx * orientation.w;
+		float fTwy = fTy * orientation.w;
+		float fTwz = fTz * orientation.w;
 
-		float twx = tx * rotation.w;
-		float twy = ty * rotation.w;
-		float twz = tz * rotation.w;
+		float fTxx = fTx * orientation.x;
+		float fTxy = fTy * orientation.x;
+		float fTxz = fTz * orientation.x;
 
-		float txx = tx * rotation.x;
-		float txy = ty * rotation.x;
-		float txz = tz * rotation.x;
+		float fTyy = fTy * orientation.y;
+		float fTyz = fTz * orientation.y;
 
-		float tyy = ty * rotation.y;
-		float tyz = tz * rotation.y;
+		float fTzz = fTz * orientation.z;
 
-		float tzz = tz * rotation.z;
+		Result.m11 = 1.0f - (fTyy + fTzz);
+		Result.m12 = fTxy - fTwz;
+		Result.m13 = fTxz + fTwy;
 
-		m.m11 = 1.0f - (tyy + tzz);
-		m.m12 = txy - twz;
-		m.m13 = txz + twy;
+		Result.m21 = fTxy + fTwz;
+		Result.m22 = 1.0f - (fTxx + fTzz);
+		Result.m23 = fTyz - fTwx;
 
-		m.m21 = twy + twz;
-		m.m22 = 1.0f - (txx + tzz);
-		m.m23 = tyz - twx;
+		Result.m31 = fTxz - fTwy;
+		Result.m32 = fTyz + fTwx;
+		Result.m33 = 1.0f - (fTxx + fTyy);
 
-		m.m31 = txz - twy;
-		m.m32 = tyz + twx;
-		m.m33 = 1.0f - (txx + tyy);
-
-		return m;
+		return Result;
 	}
 
 	/*!

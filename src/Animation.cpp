@@ -11,8 +11,7 @@ void Animation::OnUpdate(float deltaTime) {
 		myTransform = GetDad()->GetComponent<Transform>();
 	}
 
-	myTransform->rotation += Quaternion::FromAngleAxis(Vector3::UnitX, deltaTime);
-	//myTransform->rotation += Quaternion::FromAngleAxis(Vector3::UnitY, deltaTime * 0.5698045f);
+	myTransform->rotation = Quaternion::FromAngleAxis(Vector3::UnitX, elapsedTime * 1.39863425) * Quaternion::FromAngleAxis(Vector3::UnitY, elapsedTime * 0.730948235609f);
 
-	//myTransform->scale = Vector3::UnitScale * ((sin(elapsedTime) + 1.4f) / 2.0f);
+	myTransform->scale = Vector3::UnitScale * ((sin(elapsedTime) + 1.4f) / 2.0f);
 }

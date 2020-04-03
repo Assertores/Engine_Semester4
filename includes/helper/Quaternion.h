@@ -67,6 +67,16 @@ public:
 		);
 	}
 
+	inline Quaternion operator*(const Quaternion& lhs)
+	{
+		return Quaternion(
+			this->w * lhs.w - this->x * lhs.x - this->y * lhs.y - this->z * lhs.z,
+			this->w * lhs.x + this->x * lhs.w + this->y * lhs.z - this->z * lhs.y,
+			this->w * lhs.y + this->y * lhs.w + this->z * lhs.x - this->x * lhs.z,
+			this->w * lhs.z + this->z * lhs.w + this->x * lhs.y - this->y * lhs.x
+		);
+	}
+
 	/*!
 	 * @brief	element wise scaling division
 	 */
@@ -125,15 +135,17 @@ public:
 	}
 
 	static Quaternion FromAngleAxis(const Vector3& axis, float angle) {
-		float halfAngle = angle * 0.5f;
-		float sinHalfAngle = sin(halfAngle);
+		float fHalfAngle(0.5f * angle);
+		float fSin = sin(fHalfAngle);
 
-		return Quaternion{
-			cos(halfAngle),
-			axis.x * sinHalfAngle,
-			axis.y * sinHalfAngle,
-			axis.z * sinHalfAngle,
-		};
+		Quaternion result;
+
+		result.w = cos(fHalfAngle);
+		result.x = fSin * axis.x;
+		result.y = fSin * axis.y;
+		result.z = fSin * axis.z;
+
+		return result;
 	}
 
 	static Quaternion Zero;
