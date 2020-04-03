@@ -10,6 +10,8 @@
  */
 class Animation : public Component {
 private:
-	float gameTime = 0.0f;
+	float elapsedTime = 0.0f;
 	Transform* myTransform = nullptr;
+
+	void OnUpdate(float deltaTime) override;
 };

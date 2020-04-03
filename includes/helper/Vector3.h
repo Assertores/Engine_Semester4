@@ -53,7 +53,7 @@ public:
 	/*!
 	 * @brief	element wise scaling
 	 */
-	inline Vector3 operator*(const float scalar)
+	inline Vector3 operator*(const float scalar) const
 	{
 		return Vector3(
 			this->x * scalar,

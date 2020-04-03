@@ -6,6 +6,7 @@
 
 //===== ===== Intern ===== =====
 #include "Window.h"
+#include "components/Transform.h"
 
 class Mesh;
 class Material;
@@ -34,9 +35,10 @@ public:
 	void EndRender(void) const;
 
 	/*!
-	 * @brief	instructs GPU to draw a Quad to the screen
+	 * @brief			instructs GPU to draw a Quad to the screen
+	 * @param transform	the transform of the quad
 	 */
-	void RenderQuad(void) const;
+	void RenderQuad(const Transform& transform) const;
 
 	/*!
 	 * @brief		instructs GPU to draw a mesh to the screen

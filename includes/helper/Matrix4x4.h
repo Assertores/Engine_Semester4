@@ -1,5 +1,13 @@
 #pragma once
 
+//===== ===== Intern ===== =====
+#include "helper/Vector3.h"
+#include "helper/Quaternion.h"
+
+#define M_PI 3.14159265358979f
+
+#define ANG_TO_RAD (M_PI / 180.0f)
+
 struct Matrix4x4
 {
 	float m11 = 0.0f, m12 = 0.0f, m13 = 0.0f, m14 = 0.0f;
@@ -17,7 +25,7 @@ struct Matrix4x4
 		float _m21, float _m22, float _m23, float _m24,
 		float _m31, float _m32, float _m33, float _m34,
 		float _m41, float _m42, float _m43, float _m44) :
-		
+
 		m11(_m11), m12(_m12), m13(_m13), m14(_m14),
 		m21(_m21), m22(_m22), m23(_m23), m24(_m24),
 		m31(_m31), m32(_m32), m33(_m33), m34(_m34),
@@ -104,6 +112,82 @@ struct Matrix4x4
 			this->m13, this->m23, this->m33, this->m43,
 			this->m14, this->m24, this->m34, this->m44
 		};
+	}
+
+	inline static Matrix4x4 FromView(const Vector3& pos) {
+		return Matrix4x4{
+			1.0f, 0.0f, 0.0f, -Vector3::UnitX.Dot(pos),
+			0.0f, 1.0f, 0.0f, -Vector3::UnitY.Dot(pos),
+			0.0f, 0.0f, -1.0f, -Vector3::UnitZ.Dot(pos),
+			0.0f, 0.0f, 0.0f, 1.0f
+		};
+	}
+
+	inline static Matrix4x4 FromPerspetiveFOV(float fov, float aspect, float nearPlane, float farPlane) {
+		float scaleY = 1.0f / tan(ANG_TO_RAD * fov * 0.5f);
+		float scaleX = scaleY / aspect;
+
+		return Matrix4x4{
+			scaleX, 0.0f, 0.0f, 0.0f,
+			0.0f, scaleY, 0.0f, 0.0f,
+			0.0f, 0.0f, -farPlane / (farPlane - nearPlane), -farPlane * nearPlane / (farPlane - nearPlane),
+			0.0f, 0.0f, -1.0f, 0.0f,
+		};
+	}
+
+	inline static Matrix4x4 FromTranslation(const Vector3& pos) {
+		Matrix4x4 m = Matrix4x4::Identity;
+
+		m.m14 = pos.x;
+		m.m24 = pos.y;
+		m.m34 = pos.z;
+
+		return m;
+	}
+
+	inline static Matrix4x4 FromScale(const Vector3& scale) {
+		Matrix4x4 m = Matrix4x4::Identity;
+
+		m.m11 = scale.x;
+		m.m22 = scale.y;
+		m.m33 = scale.z;
+
+		return m;
+	}
+
+	inline static Matrix4x4 FromRotation(const Quaternion& rotation) {
+		Matrix4x4 m = Matrix4x4::Identity;
+
+		float tx = rotation.x + rotation.x;
+		float ty = rotation.y + rotation.y;
+		float tz = rotation.z + rotation.z;
+
+		float twx = tx * rotation.w;
+		float twy = ty * rotation.w;
+		float twz = tz * rotation.w;
+
+		float txx = tx * rotation.x;
+		float txy = ty * rotation.x;
+		float txz = tz * rotation.x;
+
+		float tyy = ty * rotation.y;
+		float tyz = tz * rotation.y;
+
+		float tzz = tz * rotation.z;
+
+		m.m11 = 1.0f - (tyy + tzz);
+		m.m12 = txy - twz;
+		m.m13 = txz + twy;
+
+		m.m21 = twy + twz;
+		m.m22 = 1.0f - (txx + tzz);
+		m.m23 = tyz - twx;
+
+		m.m31 = txz - twy;
+		m.m32 = tyz + twx;
+		m.m33 = 1.0f - (txx + tyy);
+
+		return m;
 	}
 
 	/*!

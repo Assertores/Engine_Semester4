@@ -8,6 +8,8 @@ void Scene::Load() {
 	root = new Entity();
 	auto sunEntity = new Entity(root);
 
+	root->AddComponent<Animation>();
+
 	sunEntity->AddComponent<Animation>();
 	sunEntity->AddComponent<Mesh>();
 
@@ -27,6 +29,11 @@ void Scene::Load() {
 
 void Scene::Update(float deltaTime) {
 	root->Update(deltaTime);
+}
+
+void Scene::Render(const Renderer& renderer) {
+	assert(root->HasComponent<Transform>());
+	renderer.RenderQuad(*root->GetComponent<Transform>());
 }
 
 void Scene::Unload() {

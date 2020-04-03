@@ -20,7 +20,7 @@ PS_Input VS_Main(VS_Input Input)
 	PS_Input Output;
 
 	// Calculate the position of the vertex against the world, view, and projection matrices.
-	Output.Position = mul(MVP, float4(Input.Position.xyz, 1.0));
+	Output.Position = mul(float4(Input.Position.xyz, 1.0), MVP);
 
 	// Store the input color for the pixel shader to use.
 	Output.Color = Input.Color;

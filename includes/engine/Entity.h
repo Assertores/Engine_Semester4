@@ -44,13 +44,14 @@ public:
 		if(isVirtual && T::TypeID <= 0)//0 is Transform
 			return nullptr;
 
-		else if(HasComponents<T>())
+		else if(HasComponent<T>())
 			return GetComponent<T>();
 
 		if(T::TypeID >= components.size())
 			components.resize(T::TypeID + 1);
 
 		components[T::TypeID] = new T;
+		components[T::TypeID]->dad = this;
 		components[T::TypeID]->OnCreate();
 
 		return GetComponent<T>();
@@ -63,7 +64,7 @@ public:
 	 */
 	template<typename T>
 	void RemoveComponent(void) {
-		if(!HasComponents<T>() || T::TypeID <= 0)//0 is Transform. Transform cand be Removed
+		if(!HasComponent<T>() || T::TypeID <= 0)//0 is Transform. Transform cand be Removed
 			return;
 
 		this->components[T::TypeID].OnDestroy();
@@ -109,7 +110,7 @@ public:
 	 * @return	wather a given component is already atached to the Entity
 	 */
 	template<typename T>
-	bool HasComponents(void) {
+	bool HasComponent(void) {
 		if(T::TypeID < 0 || T::TypeID >= components.size())
 			return false;
 

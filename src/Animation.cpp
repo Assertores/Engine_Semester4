@@ -4,14 +4,15 @@
 #include "components/Transform.h"
 #include "helper/Vector3.h"
 
-Animation::OnUpdate(float deltaTime) {
-	gameTime += deltaTime;
+void Animation::OnUpdate(float deltaTime) {
+	elapsedTime += deltaTime;
 
 	if(myTransform == nullptr) {
 		myTransform = GetDad()->GetComponent<Transform>();
 	}
 
-	myTransform->rotation.z += deltaTime;
+	myTransform->rotation += Quaternion::FromAngleAxis(Vector3::UnitX, deltaTime);
+	//myTransform->rotation += Quaternion::FromAngleAxis(Vector3::UnitY, deltaTime * 0.5698045f);
 
-	myTransform->scale = Vector3::UnitScale * ((sin(gameTime) + 1.4f) / 2.0f);
+	//myTransform->scale = Vector3::UnitScale * ((sin(elapsedTime) + 1.4f) / 2.0f);
 }

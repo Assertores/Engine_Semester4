@@ -47,7 +47,7 @@ void GameInstance::RenderCurrentScene(Window& target) {
 	renderer.BeginRender();
 
 	//render cubes
-	renderer.RenderQuad();
+	scenes[currentScene].Render(renderer);
 
 	renderer.EndRender();
 }

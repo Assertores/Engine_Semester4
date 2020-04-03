@@ -7,6 +7,7 @@
 #include "helper/Utils.h"
 #include "helper/Vector3.h"
 #include "helper/Matrix4x4.h"
+#include "components/Transform.h"
 #include "components/Mesh.h"
 #include "components/Material.h"
 
@@ -34,44 +35,44 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 	unsigned int displayModeCount = 0; //anzahl der unterstützen bildschirme
 	DXGI_MODE_DESC* displayMode = nullptr; //der array in dem die informationen aller unterstützten bildschirme beinhalted
 
-	if(FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)(&graphicsFactory)))) {
+	if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)(&graphicsFactory)))) {
 		std::cerr << "failed to create grapphics factor." << std::endl;
 		return false;
 	}
-	if(FAILED(graphicsFactory->EnumAdapters1(0, (&graphicsAdapter)))) {
+	if (FAILED(graphicsFactory->EnumAdapters1(0, (&graphicsAdapter)))) {
 		std::cerr << "failed to enumerate graphics adapter." << std::endl;
 		return false;
 	}
-	if(FAILED(graphicsAdapter->EnumOutputs(0, &adapterOutput))) {
+	if (FAILED(graphicsAdapter->EnumOutputs(0, &adapterOutput))) {
 		std::cerr << "failed to enumerate adapter outputs." << std::endl;
 		return false;
 	}
-	if(FAILED(adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &displayModeCount, NULL))) {
+	if (FAILED(adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &displayModeCount, NULL))) {
 		std::cerr << "failed to retrieve display mode list." << std::endl;
 		return false;
 	}
 
 	displayMode = new DXGI_MODE_DESC[displayModeCount];
-	if(!displayMode) {
+	if (!displayMode) {
 		std::cerr << "failed to allocate Display Mode array." << std::endl;
 		return false;
 	}
-	if(FAILED(adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &displayModeCount, displayMode))) {
+	if (FAILED(adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &displayModeCount, displayMode))) {
 		std::cerr << "failed to retrieve mode list." << std::endl;
 		return false;
 	}
 
 	int refreshNumerator = 0;
 	int refreshDenominator = 0;
-	for(int i = 0; i < displayModeCount; i++) {
-		if(displayMode[i].Width != myWindow.GetWidth() || displayMode[i].Height != myWindow.GetHeight())
+	for (int i = 0; i < displayModeCount; i++) {
+		if (displayMode[i].Width != myWindow.GetWidth() || displayMode[i].Height != myWindow.GetHeight())
 			continue;
 
 		refreshNumerator = displayMode[i].RefreshRate.Numerator;
 		refreshDenominator = displayMode[i].RefreshRate.Denominator;
 	}
 
-	if(FAILED(graphicsAdapter->GetDesc(&adapterDesc))) {
+	if (FAILED(graphicsAdapter->GetDesc(&adapterDesc))) {
 		std::cerr << "failed to retrieve adapter descridption." << std::endl;
 		return false;
 	}
@@ -124,28 +125,28 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 #endif
 
 	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-	if(FAILED(D3D11CreateDeviceAndSwapChain(NULL,
-											D3D_DRIVER_TYPE_HARDWARE,
-											NULL,
-											debugFlag,
-											&featureLevel,
-											1,
-											D3D11_SDK_VERSION,
-											&scDesc,
-											&this->swapChan,
-											&this->device,
-											NULL,
-											&this->context))) {
+	if (FAILED(D3D11CreateDeviceAndSwapChain(NULL,
+		D3D_DRIVER_TYPE_HARDWARE,
+		NULL,
+		debugFlag,
+		&featureLevel,
+		1,
+		D3D11_SDK_VERSION,
+		&scDesc,
+		&this->swapChan,
+		&this->device,
+		NULL,
+		&this->context))) {
 		std::cerr << "Failed to create a device and a swap chain." << std::endl;
 		return false;
 	}
 
 	ID3D11Texture2D* backBuffer;
-	if(FAILED(this->swapChan->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)(&backBuffer)))) {
+	if (FAILED(this->swapChan->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)(&backBuffer)))) {
 		std::cerr << "Failed to retrieve the back buffer." << std::endl;
 		return false;
 	}
-	if(FAILED(this->device->CreateRenderTargetView(backBuffer, NULL, &this->renderTargetView))) {
+	if (FAILED(this->device->CreateRenderTargetView(backBuffer, NULL, &this->renderTargetView))) {
 		std::cerr << "Failed to create a render target view." << std::endl;
 		return false;
 	}
@@ -158,7 +159,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 	dbDesc.Height = myWindow.GetHeight();
 	dbDesc.MipLevels = 1;
 	dbDesc.ArraySize = 1;
-	dbDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dbDesc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 	dbDesc.SampleDesc.Count = 1;
 	dbDesc.SampleDesc.Quality = 0;
 	dbDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -166,7 +167,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 	dbDesc.CPUAccessFlags = 0;
 	dbDesc.MiscFlags = 0;
 
-	if(FAILED(this->device->CreateTexture2D(&dbDesc, NULL, &this->depthStencilBuffer))) {
+	if (FAILED(this->device->CreateTexture2D(&dbDesc, NULL, &this->depthStencilBuffer))) {
 		std::cerr << "Failed to create depth stencil buffer." << std::endl;
 		return false;
 	}
@@ -175,7 +176,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 
 	dsDesc.DepthEnable = true;
 	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	dsDesc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
 
 	dsDesc.StencilEnable = true;
 	dsDesc.StencilReadMask = 0xFF;
@@ -191,7 +192,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-	if(FAILED(this->device->CreateDepthStencilState(&dsDesc, &this->depthStencilState))) {
+	if (FAILED(this->device->CreateDepthStencilState(&dsDesc, &this->depthStencilState))) {
 		std::cerr << "Failed to create depth stencil state." << std::endl;
 		return false;
 	}
@@ -200,11 +201,11 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.Format = dbDesc.Format;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
 
-	if(FAILED(this->device->CreateDepthStencilView(this->depthStencilBuffer, &dsvDesc, &this->depthStencilView))) {
+	if (FAILED(this->device->CreateDepthStencilView(this->depthStencilBuffer, &dsvDesc, &this->depthStencilView))) {
 		std::cerr << "Failed to create a depth stencil view." << std::endl;
 		return false;
 	}
@@ -224,7 +225,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 	rDesc.ScissorEnable = false;
 	rDesc.SlopeScaledDepthBias = 0.0f;
 
-	if(FAILED(this->device->CreateRasterizerState(&rDesc, &this->rasterState))) {
+	if (FAILED(this->device->CreateRasterizerState(&rDesc, &this->rasterState))) {
 		std::cerr << "Failed to create a Rasterizer state." << std::endl;
 		return false;
 	}
@@ -242,7 +243,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 
 	this->context->RSSetViewports(1, &viewPort);
 
-	if(!this->CreateBuffer() || !this->CreateShader()) {
+	if (!this->CreateBuffer() || !this->CreateShader()) {
 		return false;
 	}
 
@@ -250,19 +251,26 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 }
 
 void Renderer::BeginRender() const {
-	float Color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	float Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	this->context->ClearRenderTargetView(this->renderTargetView, Color);
-	this->context->ClearDepthStencilView(this->depthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 1.0f, 0);
+	this->context->ClearDepthStencilView(this->depthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 0.0f, 0);
 }
 
-void Renderer::RenderQuad() const {
+void Renderer::RenderQuad(const Transform& transform) const {
 	unsigned int stribe = sizeof(VertexType);
 	unsigned int offset = 0;
+
+	Matrix4x4 mvp =
+		Matrix4x4::FromPerspetiveFOV(90.0f, 1.77778f /*TODO: get aspect from Window*/, 1000.0f, 0.001f)
+		* Matrix4x4::FromView(Vector3(0.0f, 0.0f, 2.0f))
+		* transform.GetTransformMatrix();
+
+	this->context->UpdateSubresource(this->constBuffer, 0, NULL, &mvp, 0, 0);
 
 	this->context->IASetVertexBuffers(0, 1, &this->vertexBuffer, &stribe, &offset);
 	this->context->IASetIndexBuffer(this->indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-	this->context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	this->context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	this->context->IASetInputLayout(this->inputLayout);
 
@@ -307,7 +315,7 @@ void Renderer::EndRender() const {
 }
 
 void Renderer::ShutDown() {
-	if(this->swapChan)
+	if (this->swapChan)
 		this->swapChan->SetFullscreenState(false, nullptr);
 
 	SAFE_RELEASE(this->device);
@@ -321,15 +329,28 @@ void Renderer::ShutDown() {
 }
 
 bool Renderer::CreateBuffer() {
-	VertexType Vertices[4] = {
-		Vector3{-0.5f, 0.5f, 0.0f}, Color{0.5f, 0.5f, 0.5f, 0.5f},
-		Vector3{0.5f, 0.5f, 0.0f}, Color{0.5f, 0.5f, 0.5f, 0.5f},
-		Vector3{-0.5f, -0.5f, 0.0f}, Color{0.5f, 0.5f, 0.5f, 0.5f},
-		Vector3{0.5f, -0.5f, 0.0f}, Color{0.5f, 0.5f, 0.5f, 0.5f},
+	VertexType Vertices[8] = {
+		Vector3{-0.5f, 0.5f, -0.5f}, Color{0.88f, 0.1f, 0.11f, 1.0f},
+		Vector3{0.5f, 0.5f, -0.5f}, Color{0.9879f, 0.2f, 0.3f, 1.0f},
+		Vector3{-0.5f, -0.5f, -0.5f}, Color{0.876f, 0.12f, 0.25f, 1.0f},
+		Vector3{0.5f, -0.5f, -0.5f}, Color{0.879f, 0.14f, 0.21f, 1.0f},
+
+		Vector3{-0.5f, 0.5f, 0.5f}, Color{0.896f, 0.14f, 0.3f, 1.0f},
+		Vector3{0.5f, 0.5f, 0.5f}, Color{0.997f, 0.23f, 0.2f, 1.0f},
+		Vector3{-0.5f, -0.5f, 0.5f}, Color{0.864f, 0.28f, 0.21f, 1.0f},
+		Vector3{0.5f, -0.5f, 0.5f}, Color{0.8124f, 0.25f, 0.25f, 1.0f},
 	};
 
-	this->indexBufferCount = 6;
-	int Indices[6] = {0, 2, 1, 1, 2, 3};
+	this->indexBufferCount = 14;
+	int Indices[14] =
+	{
+		0, 2, 1, 3,
+		7, 2,
+		6, 0,
+		4, 1,
+		5, 7,
+		4, 6
+	};
 
 	D3D11_BUFFER_DESC VertexBufferDesc = { };
 	D3D11_BUFFER_DESC IndexBufferDesc = { };
@@ -350,7 +371,7 @@ bool Renderer::CreateBuffer() {
 	VertexData.SysMemSlicePitch = 0;
 
 	// Now create the vertex buffer
-	if(FAILED(this->device->CreateBuffer(&VertexBufferDesc, &VertexData, &this->vertexBuffer))) {
+	if (FAILED(this->device->CreateBuffer(&VertexBufferDesc, &VertexData, &this->vertexBuffer))) {
 		printf("Failed to create cube vertex buffer.\n");
 		return false;
 	}
@@ -362,13 +383,13 @@ bool Renderer::CreateBuffer() {
 	IndexBufferDesc.CPUAccessFlags = 0;
 	IndexBufferDesc.MiscFlags = 0;
 	IndexBufferDesc.StructureByteStride = 0;
-// Give the subresource structure a pointer to the index data.
+	// Give the subresource structure a pointer to the index data.
 	IndexData.pSysMem = Indices;
 	IndexData.SysMemPitch = 0;
 	IndexData.SysMemSlicePitch = 0;
 
 	// Create the index buffer.
-	if(FAILED(this->device->CreateBuffer(&IndexBufferDesc, &IndexData, &this->indexBuffer))) {
+	if (FAILED(this->device->CreateBuffer(&IndexBufferDesc, &IndexData, &this->indexBuffer))) {
 		printf("Failed to create cube index buffer.\n");
 		return false;
 	}
@@ -382,7 +403,7 @@ bool Renderer::CreateBuffer() {
 	MatrixBufferDesc.StructureByteStride = 0;
 
 	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
-	if(FAILED(this->device->CreateBuffer(&MatrixBufferDesc, NULL, &this->constBuffer))) {
+	if (FAILED(this->device->CreateBuffer(&MatrixBufferDesc, NULL, &this->constBuffer))) {
 		printf("Failed to create matrix buffer.\n");
 		return false;
 	}
@@ -396,20 +417,20 @@ bool Renderer::CreateShader() {
 	ID3DBlob* VertexShaderBuffer;
 	ID3DBlob* PixelShaderBuffer;
 
-	if(FAILED(D3DReadFileToBlob(L"./data/vs_standard.shader", &VertexShaderBuffer))) {
+	if (FAILED(D3DReadFileToBlob(L"./data/vs_standard.shader", &VertexShaderBuffer))) {
 		std::cerr << "Could not read vertex shader file." << std::endl;
 		return false;
 	}
-	if(FAILED(D3DReadFileToBlob(L"./data/ps_standard.shader", &PixelShaderBuffer))) {
+	if (FAILED(D3DReadFileToBlob(L"./data/ps_standard.shader", &PixelShaderBuffer))) {
 		std::cerr << "Could not read pixel shader file." << std::endl;
 		return false;
 	}
 
 
-	if(FAILED(this->device->CreateVertexShader(VertexShaderBuffer->GetBufferPointer()
-											   , VertexShaderBuffer->GetBufferSize()
-											   , NULL
-											   , &this->vertexShader))) {
+	if (FAILED(this->device->CreateVertexShader(VertexShaderBuffer->GetBufferPointer()
+		, VertexShaderBuffer->GetBufferSize()
+		, NULL
+		, &this->vertexShader))) {
 		std::cerr << "Failed to create vertex shader." << std::endl;
 		return false;
 	}
@@ -431,20 +452,20 @@ bool Renderer::CreateShader() {
 	PolyLayout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	PolyLayout[1].InstanceDataStepRate = 0;
 
-	if(FAILED(this->device->CreateInputLayout(PolyLayout
-											  , 2
-											  , VertexShaderBuffer->GetBufferPointer()
-											  , VertexShaderBuffer->GetBufferSize()
-											  , &this->inputLayout))) {
+	if (FAILED(this->device->CreateInputLayout(PolyLayout
+		, 2
+		, VertexShaderBuffer->GetBufferPointer()
+		, VertexShaderBuffer->GetBufferSize()
+		, &this->inputLayout))) {
 		std::cerr << "Failed to create an input layout." << std::endl;
 		return false;
 	}
 
 	// Create the vertex shader from the buffer.
-	if(FAILED(this->device->CreatePixelShader(PixelShaderBuffer->GetBufferPointer()
-											  , PixelShaderBuffer->GetBufferSize()
-											  , NULL
-											  , &this->pixelShader))) {
+	if (FAILED(this->device->CreatePixelShader(PixelShaderBuffer->GetBufferPointer()
+		, PixelShaderBuffer->GetBufferSize()
+		, NULL
+		, &this->pixelShader))) {
 		std::cerr << "Failed to create pixel shader." << std::endl;
 		return false;
 	}

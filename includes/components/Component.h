@@ -3,7 +3,7 @@
 //===== ===== Extern ===== =====
 //===== ===== Intern ===== =====
 
-#define INVALID_COMPONENT_ID -1
+#define INVALID_COMPONENT_ID 0
 
 //! forward declaration
 class Entity;

@@ -1,6 +1,7 @@
 #include "engine/Entity.h"
 #include <algorithm>
 
+#include "helper/Utils.h"
 #include "components/Component.h"
 #include "components/Transform.h"
 #include "engine/GameInstance.h"
@@ -11,9 +12,10 @@ Entity::Entity(Entity* parent) : entityID(++ActiveEntities) {
 
 	isVirtual = (parent == nullptr || parent->isVirtual);
 
-	if(isVirtual) {
+	if (isVirtual) {
 		GameInstance::GetInstance().Add(*this);
-	} else {
+	}
+	else {
 		AddComponent<Transform>();
 		AttachTo(parent);
 	}
@@ -25,16 +27,16 @@ Entity::Entity() : entityID(++ActiveEntities) {
 }
 
 bool Entity::AttachTo(Entity* parent) {
-	if(isVirtual)
+	if (isVirtual)
 		return false;
-	if(parent == nullptr) {
+	if (parent == nullptr) {
 		Detatch();
 		return true;
 	}
-	if(parent->isVirtual)
+	if (parent->isVirtual)
 		return false;
 
-	if(this->entityID != parent->entityID) //&& check if parent is a child of this entity
+	if (this->entityID != parent->entityID) //&& check if parent is a child of this entity
 	{
 		this->Detatch();
 		this->parent = parent;
@@ -47,7 +49,7 @@ bool Entity::AttachTo(Entity* parent) {
 }
 
 void Entity::Detatch(void) {
-	if(!this->parent)
+	if (!this->parent)
 		return;
 
 	this->parent->children.remove(this);
@@ -55,12 +57,12 @@ void Entity::Detatch(void) {
 }
 
 Entity* Entity::FindChildEntity(Entity* parent) {
-	for(auto& child : this->children) {
-		if(child != nullptr) {
-			if(parent->entityID == child->entityID)
+	for (auto& child : this->children) {
+		if (child != nullptr) {
+			if (parent->entityID == child->entityID)
 				return child;
 
-			if(auto ret = child->FindChildEntity(parent))
+			if (auto ret = child->FindChildEntity(parent))
 				return ret;
 		}
 	}
@@ -73,44 +75,47 @@ const std::list<Entity*> Entity::GetChildren() {
 }
 
 void Entity::Create(void) {
-	for(auto& it : components) {
-		if(nullptr == it)
+	for (auto& it : components) {
+		if (nullptr == it)
 			continue;
 
+		it->dad = this;
 		it->OnCreate();
 	}
 }
 
 void Entity::Update(float deltaTime) {
-	if(components.size() > 0) {
-		for(auto& it : components) {
-			if(nullptr == it)
+	if (components.size() > 0) {
+		for (auto& it : components) {
+			if (nullptr == it)
 				continue;
 
 			it->OnUpdate(deltaTime);
 		}
 	}
 
-	if(children.size() > 0)
-		for(auto& it : children)
+	if (children.size() > 0)
+		for (auto& it : children)
 			it->Update(deltaTime);
 }
 
 void Entity::Destroy(void) {
 	Detatch();
 
-	for(auto& it : components) {
-		if(nullptr == it)
+	for (auto it : components) {
+		if (nullptr == it)
 			continue;
 
 		it->OnDestroy();
-		delete(it);//TODO: change to save delete makro
+		SAFE_DELETE(it);
 	}
 	this->components.clear();
 
-	for(auto& it : children) {
+
+	for (auto& it : children) {
 		it->Destroy();
-		delete(it);//TODO: change to save delete makro
+		SAFE_DELETE(it);
 	}
+
 	this->children.clear();
 }

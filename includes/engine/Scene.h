@@ -3,6 +3,7 @@
 //===== ===== Extern ===== =====
 //===== ===== Intern ===== =====
 #include "Entity.h"
+#include "rendering/Renderer.h"
 
 /*!
  * manages the scene graph
@@ -13,7 +14,7 @@ public:
 	 * @brief	initialice all entitys and component in scene (fake would be loaded from file).
 	 *			call Create() funktion of root element.
 	 */
-	void Load();
+	void Load(void);
 
 	/*!
 	 * @brief			starts recursive Update() call in root entity
@@ -21,10 +22,12 @@ public:
 	 */
 	void Update(float deltaTime);
 
+	void Render(const Renderer& renderer);
+
 	/*!
 	 * @brief	calls recursive Destroy() funktion of root element.
 	 */
-	void Unload();
+	void Unload(void);
 
 	/*!
 	 * @brief			saves \link newCamera \endlink to mainCamera
