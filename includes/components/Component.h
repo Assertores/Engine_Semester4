@@ -26,10 +26,11 @@ public:
 	 */
 	template <typename T>
 	static void RegisterComponentType(void) {
-		ComponentCount++;
+		if (T::TypeID != INVALID_COMPONENT_ID)
+			return;
 
-		if(T::TypeID == INVALID_COMPONENT_ID)
-			T::TypeID = ComponentCount;
+		ComponentCount++;
+		T::TypeID = ComponentCount;
 	}
 
 	/*!

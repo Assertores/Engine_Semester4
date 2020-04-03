@@ -252,7 +252,7 @@ bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableF
 void Renderer::BeginRender() const {
 	float Color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 	this->context->ClearRenderTargetView(this->renderTargetView, Color);
-	this->context->ClearDepthStencilView(this->depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	this->context->ClearDepthStencilView(this->depthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 1.0f, 0);
 }
 
 void Renderer::RenderQuad() const {
@@ -271,6 +271,7 @@ void Renderer::RenderQuad() const {
 	this->context->VSSetShader(this->vertexShader, NULL, 0);
 	this->context->PSSetShader(this->pixelShader, NULL, 0);
 
+	this->context->OMSetRenderTargets(1, &this->renderTargetView, this->depthStencilView);
 	this->context->DrawIndexed(this->indexBufferCount, 0, 0);
 
 	this->context->VSSetShader(nullptr, NULL, 0);

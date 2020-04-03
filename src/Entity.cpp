@@ -110,7 +110,7 @@ void Entity::Destroy(void) {
 
 	for(auto& it : children) {
 		it->Destroy();
-		delete(it);
+		delete(it);//TODO: change to save delete makro
 	}
 	this->children.clear();
 }

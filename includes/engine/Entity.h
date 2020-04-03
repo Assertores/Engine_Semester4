@@ -44,7 +44,7 @@ public:
 		if(isVirtual && T::TypeID <= 0)//0 is Transform
 			return nullptr;
 
-		else  if(HasComponents<T>())
+		else if(HasComponents<T>())
 			return GetComponent<T>();
 
 		if(T::TypeID >= components.size())
