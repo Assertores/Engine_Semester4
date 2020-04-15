@@ -77,7 +77,8 @@ private:
 	ID3D11Buffer* indexBuffer;
 	int indexBufferCount;
 
-	ID3D11Buffer* constBuffer;
+	ID3D11Buffer* cameraConstBuffer;
+	ID3D11Buffer* modelConstBuffer;
 
 	int vRAM;
 	char* vDesc;

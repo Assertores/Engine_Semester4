@@ -11,6 +11,10 @@
 #include "components/Mesh.h"
 #include "components/Material.h"
 
+#ifdef _MSC_VER
+#define ALIGN(x) __declspec(align(x))
+#endif
+
 struct Color {
 	float r;
 	float g;
@@ -21,10 +25,20 @@ struct Color {
 struct VertexType {
 	Vector3 position;
 	Color color;
+	Vector3 normal;
+	struct {
+		float u;
+		float v;
+	} uv;
 };
 
-struct ConstBufferType {
+ALIGN(16) struct CameraConstType {
 	Matrix4x4 modelViewProjection;
+	Vector3 camPos;
+};
+
+ALIGN(16) struct ModelConstType {
+	Matrix4x4 model;
 };
 
 bool Renderer::Initialize(const Window& myWindow, bool enalbeVSync, bool enableFullscreen) {
@@ -254,18 +268,38 @@ void Renderer::BeginRender() const {
 	float Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	this->context->ClearRenderTargetView(this->renderTargetView, Color);
 	this->context->ClearDepthStencilView(this->depthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 0.0f, 0);
+
+	D3D11_MAPPED_SUBRESOURCE mappedCameraResource = {};
+
+	Vector3 camPos = Vector3(0.0f, 0.0f, 2.0f);
+
+	Matrix4x4 vp =
+		Matrix4x4::FromPerspetiveFOV(90.0f, 1.77778f /*TODO: get aspect from Window*/, 1000.0f, 0.001f)
+		* Matrix4x4::FromView(camPos);
+
+	this->context->Map(this->cameraConstBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedCameraResource);
+
+	auto cameraData = reinterpret_cast<CameraConstType*>(mappedCameraResource.pData);
+
+	cameraData->modelViewProjection = vp;
+	cameraData->camPos = camPos;
+
+	this->context->Unmap(this->cameraConstBuffer, 0);
 }
 
 void Renderer::RenderQuad(const Transform& transform) const {
 	unsigned int stribe = sizeof(VertexType);
 	unsigned int offset = 0;
 
-	Matrix4x4 mvp =
-		Matrix4x4::FromPerspetiveFOV(90.0f, 1.77778f /*TODO: get aspect from Window*/, 1000.0f, 0.001f)
-		* Matrix4x4::FromView(Vector3(0.0f, 0.0f, 2.0f))
-		* transform.GetTransformMatrix();
+	D3D11_MAPPED_SUBRESOURCE mappedModelResource = {};
 
-	this->context->UpdateSubresource(this->constBuffer, 0, NULL, &mvp, 0, 0);
+	this->context->Map(this->modelConstBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedModelResource);
+
+	auto modelData = reinterpret_cast<ModelConstType*>(mappedModelResource.pData);
+
+	modelData->model = transform.GetTransformMatrix();
+
+	this->context->Unmap(this->modelConstBuffer, 0);
 
 	this->context->IASetVertexBuffers(0, 1, &this->vertexBuffer, &stribe, &offset);
 	this->context->IASetIndexBuffer(this->indexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -274,7 +308,8 @@ void Renderer::RenderQuad(const Transform& transform) const {
 
 	this->context->IASetInputLayout(this->inputLayout);
 
-	this->context->VSSetConstantBuffers(0, 1, &this->constBuffer);
+	this->context->VSSetConstantBuffers(0, 1, &this->cameraConstBuffer);
+	this->context->VSSetConstantBuffers(1, 1, &this->modelConstBuffer);
 
 	this->context->VSSetShader(this->vertexShader, NULL, 0);
 	this->context->PSSetShader(this->pixelShader, NULL, 0);
@@ -286,6 +321,7 @@ void Renderer::RenderQuad(const Transform& transform) const {
 	this->context->PSSetShader(nullptr, NULL, 0);
 }
 
+/*
 void Renderer::RenderMesh(Mesh& mesh, Material* mat) const {
 	assert(false && "not implimented");
 
@@ -309,6 +345,7 @@ void Renderer::RenderMesh(Mesh& mesh, Material* mat) const {
 	this->context->VSSetShader(nullptr, NULL, 0);
 	this->context->PSSetShader(nullptr, NULL, 0);
 }
+*/
 
 void Renderer::EndRender() const {
 	this->swapChan->Present(this->isVSync ? 1 : 0, 0);
@@ -318,27 +355,34 @@ void Renderer::ShutDown() {
 	if (this->swapChan)
 		this->swapChan->SetFullscreenState(false, nullptr);
 
-	SAFE_RELEASE(this->device);
-	SAFE_RELEASE(this->context);
-	SAFE_RELEASE(this->swapChan);
-	SAFE_RELEASE(this->renderTargetView);
-	SAFE_RELEASE(this->depthStencilBuffer);
-	SAFE_RELEASE(this->depthStencilState);
-	SAFE_RELEASE(this->depthStencilView);
+	SAFE_RELEASE(this->modelConstBuffer);
+	SAFE_RELEASE(this->cameraConstBuffer);
+	SAFE_RELEASE(this->indexBuffer);
+	SAFE_RELEASE(this->vertexBuffer);
+	SAFE_RELEASE(this->inputLayout);
+	SAFE_RELEASE(this->pixelShader);
+	SAFE_RELEASE(this->vertexShader);
 	SAFE_RELEASE(this->rasterState);
+	SAFE_RELEASE(this->depthStencilView);
+	SAFE_RELEASE(this->depthStencilState);
+	SAFE_RELEASE(this->depthStencilBuffer);
+	SAFE_RELEASE(this->renderTargetView);
+	SAFE_RELEASE(this->swapChan);
+	SAFE_RELEASE(this->context);
+	SAFE_RELEASE(this->device);
 }
 
 bool Renderer::CreateBuffer() {
 	VertexType Vertices[8] = {
-		Vector3{-0.5f, 0.5f, -0.5f}, Color{0.88f, 0.1f, 0.11f, 1.0f},
-		Vector3{0.5f, 0.5f, -0.5f}, Color{0.9879f, 0.2f, 0.3f, 1.0f},
-		Vector3{-0.5f, -0.5f, -0.5f}, Color{0.876f, 0.12f, 0.25f, 1.0f},
-		Vector3{0.5f, -0.5f, -0.5f}, Color{0.879f, 0.14f, 0.21f, 1.0f},
+		Vector3{-0.5f, 0.5f, -0.5f},	Color{0.88f, 0.1f, 0.11f, 1.0f},	Vector3{-0.57735f, 0.57735f, -0.57735f },	{0.0f, 0.0f},
+		Vector3{0.5f, 0.5f, -0.5f},		Color{0.9879f, 0.2f, 0.3f, 1.0f},	Vector3{0.57735f, 0.57735f, -0.57735f },	{0.0f, 0.0f},
+		Vector3{-0.5f, -0.5f, -0.5f},	Color{0.876f, 0.12f, 0.25f, 1.0f},	Vector3{-0.57735f, -0.57735f, -0.57735f },	{0.0f, 0.0f},
+		Vector3{0.5f, -0.5f, -0.5f},	Color{0.879f, 0.14f, 0.21f, 1.0f},	Vector3{0.57735f, -0.57735f, -0.57735f },	{0.0f, 0.0f},
 
-		Vector3{-0.5f, 0.5f, 0.5f}, Color{0.896f, 0.14f, 0.3f, 1.0f},
-		Vector3{0.5f, 0.5f, 0.5f}, Color{0.997f, 0.23f, 0.2f, 1.0f},
-		Vector3{-0.5f, -0.5f, 0.5f}, Color{0.864f, 0.28f, 0.21f, 1.0f},
-		Vector3{0.5f, -0.5f, 0.5f}, Color{0.8124f, 0.25f, 0.25f, 1.0f},
+		Vector3{-0.5f, 0.5f, 0.5f},		Color{0.896f, 0.14f, 0.3f, 1.0f},	Vector3{-0.57735f, 0.57735f, 0.57735f },	{0.0f, 0.0f},
+		Vector3{0.5f, 0.5f, 0.5f},		Color{0.997f, 0.23f, 0.2f, 1.0f},	Vector3{0.57735f, 0.57735f, 0.57735f },		{0.0f, 0.0f},
+		Vector3{-0.5f, -0.5f, 0.5f},	Color{0.864f, 0.28f, 0.21f, 1.0f},	Vector3{-0.57735f, -0.57735f, 0.57735f },	{0.0f, 0.0f},
+		Vector3{0.5f, -0.5f, 0.5f},		Color{0.8124f, 0.25f, 0.25f, 1.0f},	Vector3{0.57735f, -0.57735f, 0.57735f },	{0.0f, 0.0f},
 	};
 
 	this->indexBufferCount = 14;
@@ -354,7 +398,8 @@ bool Renderer::CreateBuffer() {
 
 	D3D11_BUFFER_DESC VertexBufferDesc = { };
 	D3D11_BUFFER_DESC IndexBufferDesc = { };
-	D3D11_BUFFER_DESC MatrixBufferDesc = { };
+	D3D11_BUFFER_DESC CameraConstDesc = { };
+	D3D11_BUFFER_DESC ModelBufferDesc = { };
 	D3D11_SUBRESOURCE_DATA VertexData = { };
 	D3D11_SUBRESOURCE_DATA IndexData = { };
 
@@ -394,21 +439,35 @@ bool Renderer::CreateBuffer() {
 		return false;
 	}
 
-	// Setup the description of the dynamic matrix constant buffer that is in the vertex shader.
-	MatrixBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	MatrixBufferDesc.ByteWidth = sizeof(ConstBufferType);
-	MatrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	MatrixBufferDesc.CPUAccessFlags = 0;
-	MatrixBufferDesc.MiscFlags = 0;
-	MatrixBufferDesc.StructureByteStride = 0;
+	// set up camera desc
 
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
-	if (FAILED(this->device->CreateBuffer(&MatrixBufferDesc, NULL, &this->constBuffer))) {
+	CameraConstDesc.Usage = D3D11_USAGE_DYNAMIC;
+	CameraConstDesc.ByteWidth = sizeof(CameraConstType);
+	CameraConstDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	CameraConstDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	CameraConstDesc.MiscFlags = 0;
+	CameraConstDesc.StructureByteStride = 0;
+
+	if (FAILED(this->device->CreateBuffer(&CameraConstDesc, NULL, &this->cameraConstBuffer))) {
 		printf("Failed to create matrix buffer.\n");
 		return false;
 	}
 
-	this->context->UpdateSubresource(this->constBuffer, 0, NULL, &Matrix4x4::Identity, 0, 0);
+	// Setup the description of the dynamic matrix constant buffer that is in the vertex shader.
+	ModelBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	ModelBufferDesc.ByteWidth = sizeof(ModelConstType);
+	ModelBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	ModelBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	ModelBufferDesc.MiscFlags = 0;
+	ModelBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	if (FAILED(this->device->CreateBuffer(&ModelBufferDesc, NULL, &this->modelConstBuffer))) {
+		printf("Failed to create matrix buffer.\n");
+		return false;
+	}
+
+	//this->context->UpdateSubresource(this->constBuffer, 0, NULL, &Matrix4x4::Identity, 0, 0);
 
 	return true;
 }
@@ -435,25 +494,41 @@ bool Renderer::CreateShader() {
 		return false;
 	}
 
-	D3D11_INPUT_ELEMENT_DESC PolyLayout[2];
-	PolyLayout[0].SemanticName = "POSITION";
-	PolyLayout[0].SemanticIndex = 0;
-	PolyLayout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	PolyLayout[0].InputSlot = 0;
-	PolyLayout[0].AlignedByteOffset = 0;
-	PolyLayout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	PolyLayout[0].InstanceDataStepRate = 0;
+	D3D11_INPUT_ELEMENT_DESC VertexLayout[4] = { /*your mom gay*/ };
+	VertexLayout[0].SemanticName = "POSITION";
+	VertexLayout[0].SemanticIndex = 0;
+	VertexLayout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	VertexLayout[0].InputSlot = 0;
+	VertexLayout[0].AlignedByteOffset = 0;
+	VertexLayout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	VertexLayout[0].InstanceDataStepRate = 0;
 
-	PolyLayout[1].SemanticName = "COLOR";
-	PolyLayout[1].SemanticIndex = 0;
-	PolyLayout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	PolyLayout[1].InputSlot = 0;
-	PolyLayout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-	PolyLayout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	PolyLayout[1].InstanceDataStepRate = 0;
+	VertexLayout[1].SemanticName = "COLOR";
+	VertexLayout[1].SemanticIndex = 0;
+	VertexLayout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	VertexLayout[1].InputSlot = 0;
+	VertexLayout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+	VertexLayout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	VertexLayout[1].InstanceDataStepRate = 0;
 
-	if (FAILED(this->device->CreateInputLayout(PolyLayout
-		, 2
+	VertexLayout[2].SemanticName = "NORMAL";
+	VertexLayout[2].SemanticIndex = 0;
+	VertexLayout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	VertexLayout[2].InputSlot = 0;
+	VertexLayout[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+	VertexLayout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	VertexLayout[2].InstanceDataStepRate = 0;
+
+	VertexLayout[3].SemanticName = "TEXCOORD";
+	VertexLayout[3].SemanticIndex = 0;
+	VertexLayout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+	VertexLayout[3].InputSlot = 0;
+	VertexLayout[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+	VertexLayout[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	VertexLayout[3].InstanceDataStepRate = 0;
+
+	if (FAILED(this->device->CreateInputLayout(VertexLayout
+		, sizeof(VertexLayout)/sizeof(D3D11_INPUT_ELEMENT_DESC)
 		, VertexShaderBuffer->GetBufferPointer()
 		, VertexShaderBuffer->GetBufferSize()
 		, &this->inputLayout))) {
